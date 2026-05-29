@@ -1,6 +1,6 @@
 """
 streamlit_app.py — Professional Business Intelligence Dashboard
-GenAI Retail Forecasting Engine · Rossmann Store Sales (1,115 stores)
+RetailForecastAI · Rossmann Store Sales (1,115 stores)
 
 Launch:  .venv/bin/streamlit run streamlit_app.py   (or: make ui)
 """

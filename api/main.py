@@ -39,8 +39,8 @@ def create_app() -> FastAPI:
     cfg = get_settings()
 
     app = FastAPI(
-        title="GenAI Retail Forecasting API",
-        description=("Serves 30-day ARIMA_PLUS demand forecasts and GPT-4 executive summaries for retail products."),
+        title="RetailForecastAI API",
+        description=("Serves 30-day ARIMA_PLUS demand forecasts and AI-assisted executive summaries for retail products."),
         version=cfg.app_version,
         docs_url=None if cfg.is_production else "/docs",
         redoc_url=None if cfg.is_production else "/redoc",

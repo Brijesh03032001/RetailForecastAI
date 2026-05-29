@@ -3,9 +3,9 @@ requires      = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name        = "genai-retail-forecasting"
+name        = "retailforecastai"
 version     = "1.0.0"
-description = "Production-grade GenAI retail demand forecasting pipeline"
+description = "Production-grade retail demand forecasting pipeline for RetailForecastAI"
 requires-python = ">=3.12"
 
 [tool.setuptools.packages.find]

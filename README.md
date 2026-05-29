@@ -1,6 +1,6 @@
-![GenAI Retail Forecasting Engine](genai_retail_forecast_cover.png)
+![RetailForecastAI](genai_retail_forecast_cover.png)
 
-# GenAI Retail Demand Forecasting Engine
+# RetailForecastAI
 
 > **Production-grade ML system** that ingests raw retail sales, trains time-series forecasting models on BigQuery ML, and delivers 30-day demand forecasts through a FastAPI backend and a real-time Streamlit BI dashboard.
 
@@ -31,7 +31,7 @@
 
 ## Overview
 
-This project demonstrates a complete, end-to-end **MLOps + GenAI** pipeline built for retail demand forecasting at scale. It covers every layer of a production system:
+RetailForecastAI demonstrates a complete, end-to-end **MLOps + retail forecasting** pipeline built for demand forecasting at scale. It covers every layer of a production system:
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
@@ -357,7 +357,7 @@ Migrations are managed with **Alembic** (`make migrate`).
 ## Project Structure
 
 ```
-genai-retail-forecast/
+RetailForecastAI/
 │
 ├── api/                        ← FastAPI application
 │   ├── main.py                 ← App factory, lifespan, CORS, error handlers
@@ -505,8 +505,8 @@ git tag v1.2.3 && git push --tags
 
 ```bash
 # 1. Clone and create virtual environment
-git clone https://github.com/Brijesh03032001/genai-retail-forecast.git
-cd genai-retail-forecast
+git clone https://github.com/Brijesh03032001/RetailForecastAI.git
+cd RetailForecastAI
 make install               # creates .venv and installs all deps
 
 # 2. Copy and fill in environment variables
