@@ -7,3 +7,4 @@ try:
 except Exception:
     pass
 from datetime import datetime
+return None
