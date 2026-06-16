@@ -6,3 +6,4 @@ class TempClass:
     pass
 
 pass
+temp_dict = {}
