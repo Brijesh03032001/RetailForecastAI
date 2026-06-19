@@ -380,7 +380,7 @@ st.iframe(
     .forEach(function(k){ window.parent.localStorage.removeItem(k); });
 </script>
 """,
-    height=0,
+    height=1,
 )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
