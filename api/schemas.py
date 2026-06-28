@@ -106,6 +106,9 @@ class NarrativeResponse(BaseModel):
     product_id: str
     summary: str
     generated_at: datetime
+    # Populated only right after a live /generate call — the RAG chunks that
+    # grounded this summary. Not persisted, so it's absent on GET replays.
+    retrieved_sources: list[str] | None = None
 
     model_config = {"from_attributes": True}
 
