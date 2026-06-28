@@ -7,7 +7,6 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from config import get_settings
@@ -81,6 +80,9 @@ class NarrativeChain:
                 ("human", HUMAN_PROMPT),
             ]
         )
+        #: sources (and chunk count) retrieved by the most recent .generate() call —
+        #: read after calling generate() to show what grounded the summary.
+        self.last_sources: list[str] = []
 
     def _get_store(self) -> FAISS:
         if self._store is None:
@@ -113,26 +115,30 @@ class NarrativeChain:
             search_kwargs={"k": cfg.retriever_top_k, "fetch_k": cfg.retriever_top_k * 3},
         )
 
+        # Retrieve eagerly (rather than inside the chain) so the retrieved sources
+        # are inspectable afterward via .last_sources — proves the summary is
+        # grounded in retrieved context, not just the LLM's own knowledge.
+        retrieved_docs = retriever.invoke(product_id)
+        self.last_sources = [doc.metadata.get("source", "unknown") for doc in retrieved_docs]
+        context_str = _format_docs(retrieved_docs)
+
         forecast_str = _format_forecast(forecast_rows, cfg.forecast_horizon_days)
 
-        chain = (
-            {
-                "context": RunnableLambda(lambda x: x["product_id"]) | retriever | RunnableLambda(_format_docs),
-                "product_id": RunnableLambda(lambda x: x["product_id"]),
-                "forecast_data": RunnableLambda(lambda x: x["forecast_data"]),
-                "horizon": RunnableLambda(lambda _: str(cfg.forecast_horizon_days)),
-            }
-            | self._prompt
-            | self._llm
-            | StrOutputParser()
-        )
+        chain = self._prompt | self._llm | StrOutputParser()
 
-        logger.info("Generating narrative for %s (%d forecast rows)", product_id, len(forecast_rows))
+        logger.info(
+            "Generating narrative for %s (%d forecast rows, %d retrieved chunks)",
+            product_id,
+            len(forecast_rows),
+            len(retrieved_docs),
+        )
 
         result: str = chain.invoke(
             {
                 "product_id": product_id,
                 "forecast_data": forecast_str,
+                "context": context_str,
+                "horizon": str(cfg.forecast_horizon_days),
             }
         )
 
