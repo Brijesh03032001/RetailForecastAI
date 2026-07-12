@@ -18,6 +18,8 @@ base = [
   "pydantic>=2.7",
   "pydantic-settings>=2.3",
   "structlog>=24.1",
+  "numpy>=1.26",
+  "pandas>=2.2,<3.0",
 ]
 etl = [
   "apache-beam[gcp]>=2.55",
@@ -56,7 +58,6 @@ ui = [
   "plotly>=5.22",
   "requests>=2.31",
   "psycopg2-binary>=2.9",
-  "pandas>=2.2,<3.0",  # pandas 3.x's pyarrow-backed dtype default segfaults in pd.read_sql on this arm64 build
 ]
 dev = [
   "pytest>=8.2",

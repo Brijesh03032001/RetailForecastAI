@@ -41,9 +41,13 @@ from db.models import Base, Forecast
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
 
-def build_forecasts(num_stores: int | None, horizon_days: int) -> pd.DataFrame:
+def build_forecasts(
+    num_stores: int | None,
+    horizon_days: int,
+    data_dir: Path = DATA_DIR,
+) -> pd.DataFrame:
     train = pd.read_csv(
-        DATA_DIR / "train.csv",
+        data_dir / "train.csv",
         usecols=["Store", "Date", "Sales", "Open"],
         dtype={"Store": "int32", "Sales": "float64", "Open": "int8"},
         parse_dates=["Date"],
@@ -57,8 +61,8 @@ def build_forecasts(num_stores: int | None, horizon_days: int) -> pd.DataFrame:
     train = train[train["Store"].isin(store_ids)]
 
     last_date = train["Date"].max()
-    recent_cut = last_date - pd.Timedelta(weeks=8)
-    older_cut = last_date - pd.Timedelta(weeks=16)
+    recent_cut = last_date - pd.DateOffset(weeks=8)
+    older_cut = last_date - pd.DateOffset(weeks=16)
 
     dow_stats = (
         train[train["Date"] > recent_cut]
@@ -118,7 +122,9 @@ async def write_to_postgres(df: pd.DataFrame) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Seed PostgreSQL forecasts table from local Rossmann CSVs (no GCP/BQ needed)")
+    parser = argparse.ArgumentParser(
+        description="Seed PostgreSQL forecasts table from local Rossmann CSVs (no GCP/BQ needed)"
+    )
     parser.add_argument("--stores", type=int, default=None, help="Limit to first N stores (default: all 1,115)")
     args = parser.parse_args()
 
