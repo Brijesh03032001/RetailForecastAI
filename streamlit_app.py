@@ -11,6 +11,7 @@ import io
 import os
 from datetime import datetime
 from itertools import cycle
+from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
@@ -33,6 +34,7 @@ st.set_page_config(
 
 API_BASE = os.getenv("API_BASE_URL", "http://localhost:8080")
 DB_URL_RAW = os.getenv("DATABASE_URL", "postgresql+asyncpg://retail:retail@localhost:5432/retail")
+BASELINE_METRICS_PATH = Path("data/reports/baseline_metrics.csv")
 
 # ── Colour system ──────────────────────────────────────────────────────────────
 C_BLUE = "#2563EB"
@@ -268,6 +270,13 @@ def load_weekly_fleet() -> pd.DataFrame:
     """)
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def load_baseline_metrics() -> pd.DataFrame:
+    if not BASELINE_METRICS_PATH.exists():
+        return pd.DataFrame()
+    return pd.read_csv(BASELINE_METRICS_PATH)
+
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # API helpers
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -469,11 +478,12 @@ st.markdown(
 # Tabs
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-tab_network, tab_store, tab_compare, tab_narrative, tab_about = st.tabs(
+tab_network, tab_store, tab_compare, tab_baseline, tab_narrative, tab_about = st.tabs(
     [
         "🌐 Network Overview",
         "📊 Store Forecast",
         "🔀 Compare",
+        "🧪 Model Benchmarks",
         "🤖 AI Narrative",
         "ℹ️ About",
     ]
@@ -1202,7 +1212,153 @@ with tab_compare:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — AI NARRATIVE
+# TAB 4 — MODEL BENCHMARKS
+# ══════════════════════════════════════════════════════════════════════════════
+
+with tab_baseline:
+    metrics_df = load_baseline_metrics()
+
+    if metrics_df.empty:
+        st.warning("No baseline metrics found. Run `make baseline-report` to generate the local comparison report.")
+    else:
+        metrics_df = metrics_df.sort_values("mae").reset_index(drop=True)
+        best = metrics_df.iloc[0]
+        seasonal = metrics_df[metrics_df["model"] == "seasonal_naive_7d"].iloc[0]
+        mae_gain = (seasonal["mae"] - best["mae"]) / seasonal["mae"] * 100
+        mape_gain = (seasonal["mape_pct"] - best["mape_pct"]) / seasonal["mape_pct"] * 100
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.markdown(
+            f'<div class="kpi green"><div class="val">{best["mae"]:,.0f}</div>'
+            f'<div class="lbl">Best MAE</div>'
+            f'<span class="sub up">{best["model"]}</span></div>',
+            unsafe_allow_html=True,
+        )
+        k2.markdown(
+            f'<div class="kpi"><div class="val">{mae_gain:.1f}%</div>'
+            f'<div class="lbl">MAE Lift</div>'
+            f'<span class="sub flat">vs seasonal naive</span></div>',
+            unsafe_allow_html=True,
+        )
+        k3.markdown(
+            f'<div class="kpi orange"><div class="val">{best["mape_pct"]:.1f}%</div>'
+            f'<div class="lbl">Best MAPE</div>'
+            f'<span class="sub up">{mape_gain:.1f}% lower than naive</span></div>',
+            unsafe_allow_html=True,
+        )
+        k4.markdown(
+            f'<div class="kpi teal"><div class="val">{best["bias_pct"]:+.1f}%</div>'
+            f'<div class="lbl">Forecast Bias</div>'
+            f'<span class="sub flat">final 30-day holdout</span></div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
+
+        col_rank, col_error = st.columns([3, 2])
+
+        with col_rank:
+            st.markdown(
+                '<div class="card"><div class="card-title">🧪 Backtest Ranking — Final 30-Day Holdout</div>',
+                unsafe_allow_html=True,
+            )
+            long_metrics = metrics_df.melt(
+                id_vars="model",
+                value_vars=["mae", "rmse"],
+                var_name="metric",
+                value_name="error",
+            )
+            fig_rank = px.bar(
+                long_metrics,
+                x="model",
+                y="error",
+                color="metric",
+                barmode="group",
+                color_discrete_map={"mae": C_BLUE, "rmse": C_AMBER},
+                labels={"model": "", "error": "Units", "metric": "Metric"},
+            )
+            fig_rank.update_traces(
+                texttemplate="%{y:,.0f}",
+                textposition="outside",
+                hovertemplate="<b>%{x}</b><br>%{legendgroup}: %{y:,.0f} units<extra></extra>",
+            )
+            fig_rank.update_layout(
+                **_bg_fig(340),
+                xaxis=dict(showgrid=False, tickangle=-18),
+                yaxis=dict(gridcolor="#F1F5F9", title="Error units"),
+                legend=dict(orientation="h", y=1.08, x=0),
+                bargap=0.28,
+            )
+            st.plotly_chart(fig_rank, use_container_width=True, config={"displayModeBar": False})
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col_error:
+            st.markdown(
+                '<div class="card"><div class="card-title">📉 Percentage Error Profile</div>',
+                unsafe_allow_html=True,
+            )
+            fig_err = go.Figure()
+            fig_err.add_trace(
+                go.Bar(
+                    x=metrics_df["model"],
+                    y=metrics_df["mape_pct"],
+                    name="MAPE",
+                    marker_color=C_RED,
+                    text=metrics_df["mape_pct"].apply(lambda value: f"{value:.1f}%"),
+                    textposition="outside",
+                    hovertemplate="<b>%{x}</b><br>MAPE: %{y:.2f}%<extra></extra>",
+                )
+            )
+            fig_err.add_trace(
+                go.Scatter(
+                    x=metrics_df["model"],
+                    y=metrics_df["bias_pct"],
+                    name="Bias",
+                    mode="lines+markers",
+                    line=dict(color=C_TEAL, width=2),
+                    marker=dict(size=8),
+                    hovertemplate="<b>%{x}</b><br>Bias: %{y:.2f}%<extra></extra>",
+                )
+            )
+            fig_err.add_hline(y=0, line_dash="dot", line_color="#64748B", line_width=1)
+            fig_err.update_layout(
+                **_bg_fig(340),
+                xaxis=dict(showgrid=False, tickangle=-18),
+                yaxis=dict(gridcolor="#F1F5F9", title="Percent"),
+                legend=dict(orientation="h", y=1.08, x=0),
+            )
+            st.plotly_chart(fig_err, use_container_width=True, config={"displayModeBar": False})
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown(
+            """
+<div class="insight">
+💡 <b>Interpretation:</b> The local seasonal-trend model is not just a placeholder.
+On the last 30 actual sales days, it beats the seasonal-naive baseline on MAE and MAPE
+while staying simple enough to run without GCP, BigQuery ML, or a paid model service.
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+        table_df = metrics_df.copy()
+        table_df["model"] = table_df["model"].str.replace("_", " ").str.title()
+        st.dataframe(
+            table_df,
+            column_config={
+                "model": st.column_config.TextColumn("Model"),
+                "mae": st.column_config.NumberColumn("MAE", format="%.2f"),
+                "rmse": st.column_config.NumberColumn("RMSE", format="%.2f"),
+                "mape_pct": st.column_config.NumberColumn("MAPE %", format="%.2f"),
+                "bias_pct": st.column_config.NumberColumn("Bias %", format="%.2f"),
+            },
+            hide_index=True,
+            use_container_width=True,
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — AI NARRATIVE
 # ══════════════════════════════════════════════════════════════════════════════
 
 with tab_narrative:
