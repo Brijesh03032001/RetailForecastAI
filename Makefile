@@ -23,6 +23,10 @@ install:  ## Create venv and install all dependency groups
 	$(PIP) install --upgrade pip
 	$(PIP) install -e ".[base,etl,rag,api,ui,dev]"
 
+.PHONY: lock
+lock:  ## Regenerate requirements.lock from the active venv
+	$(VENV)/bin/python -m pip freeze --exclude-editable --all > requirements.lock
+
 .PHONY: env
 env:  ## Copy .env.example → .env (won't overwrite)
 	@test -f .env || cp .env.example .env && echo "Created .env — fill in your secrets"

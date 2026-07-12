@@ -536,6 +536,8 @@ The local path is the fastest way to review the working app.
 git clone https://github.com/Brijesh03032001/RetailForecastAI.git
 cd RetailForecastAI
 make install               # creates .venv and installs all deps
+# Optional repeatable install once a venv exists:
+# .venv/bin/pip install -r requirements.lock
 
 # 2. Copy and fill in environment variables
 cp .env.example .env
@@ -590,6 +592,7 @@ This writes:
 
 ```bash
 make install          # Set up virtualenv + install deps
+make lock             # Regenerate requirements.lock from active venv
 make up               # Start Docker services (PostgreSQL)
 make down             # Stop Docker services
 make migrate          # Run Alembic migrations

@@ -73,3 +73,4 @@ Current baseline result on 1,115 stores / 33,450 holdout rows: `local_seasonal_t
 - Added a Streamlit **Model Benchmarks** tab that reads `data/reports/baseline_metrics.csv` and visualizes MAE/RMSE/MAPE/bias for the local baseline comparison.
 - Added `scripts/local_doctor.py` plus `make local-doctor` to check no-GCP demo readiness: raw Rossmann CSVs, baseline metrics, FAISS index, PostgreSQL forecast/narrative counts, and FastAPI health.
 - Added focused tests for the local doctor helper behavior in `tests/test_local_doctor.py`.
+- Added `requirements.lock` plus `make lock` to pin the current local runtime dependency set and reduce fresh-clone drift.
