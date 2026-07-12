@@ -6,6 +6,23 @@
 
 ---
 
+## Current Local Path
+
+This repo now supports a no-GCP local demo path for development and portfolio review. The original Apache Beam + BigQuery ML code remains intact for cloud deployment, but the app can run end-to-end locally using:
+
+- real Rossmann CSVs in `data/raw/`
+- Docker PostgreSQL
+- `scripts/seed_forecasts_local.py` for 30-day store forecasts
+- FAISS + local embeddings for business context retrieval
+- Ollama, Groq, or OpenAI-compatible chat models for narratives
+- FastAPI + Streamlit for the product surface
+
+The local forecaster is also backtested against simple baselines in [data/reports/baseline_comparison.md](data/reports/baseline_comparison.md). On the final 30-day holdout window, `local_seasonal_trend` is currently best by MAE among the included local baselines.
+
+The cloud path is still the production architecture: Beam/Dataflow -> BigQuery ML `ARIMA_PLUS` -> PostgreSQL -> API/dashboard.
+
+---
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -23,9 +40,10 @@
 7. [Data Flow](#data-flow)
 8. [CI/CD Pipeline](#cicd-pipeline)
 9. [Local Development](#local-development)
-10. [Environment Variables](#environment-variables)
-11. [API Reference](#api-reference)
-12. [Key Design Decisions](#key-design-decisions)
+10. [Baseline Comparison](#baseline-comparison)
+11. [Environment Variables](#environment-variables)
+12. [API Reference](#api-reference)
+13. [Key Design Decisions](#key-design-decisions)
 
 ---
 
@@ -496,12 +514,20 @@ git tag v1.2.3 && git push --tags
 
 ## Local Development
 
+There are two ways to run the project:
+
+- **Local demo path, recommended first:** no GCP, no billing, uses the real Rossmann CSVs and local PostgreSQL.
+- **Cloud production path:** uses GCS, Apache Beam/Dataflow, BigQuery ML, and Cloud Run.
+
+The local path is the fastest way to review the working app.
+
 ### Prerequisites
 - Python 3.12+
 - Docker Desktop
-- `gcloud` CLI (for GCP features only)
+- Ollama, Groq key, or OpenAI-compatible endpoint for narrative generation
+- `gcloud` CLI only for GCP features
 
-### Setup
+### Local Demo Setup
 
 ```bash
 # 1. Clone and create virtual environment
@@ -511,7 +537,7 @@ make install               # creates .venv and installs all deps
 
 # 2. Copy and fill in environment variables
 cp .env.example .env
-# Edit .env — minimum required: DATABASE_URL, GROQ_API_KEY (or OPENAI_API_KEY)
+# Minimum local values: DATABASE_URL, SCHEDULER_SECRET, LLM/embedding settings
 
 # 3. Start PostgreSQL
 make up                    # docker compose up -d
@@ -519,15 +545,32 @@ make up                    # docker compose up -d
 # 4. Run migrations
 make migrate               # alembic upgrade head
 
-# 5. Seed local data (generates synthetic Rossmann-style sales)
-python scripts/seed_data.py
+# 5. Seed local forecasts from the real Rossmann CSVs
+make seed-local-forecasts
 
-# 6. Start the API
+# 6. Build the FAISS business-context index
+make build-index
+
+# 7. Optional: generate AI narratives for a small batch
+make sync-narratives
+
+# 8. Start the API
 make run                   # uvicorn on localhost:8080
 
-# 7. Open the dashboard
+# 9. Open the dashboard
 make ui                    # streamlit on localhost:8501
 ```
+
+### Local Baseline Report
+
+```bash
+make baseline-report
+```
+
+This writes:
+
+- `data/reports/baseline_comparison.md`
+- `data/reports/baseline_metrics.csv`
 
 ### All Makefile Commands
 
@@ -540,12 +583,31 @@ make run              # Start FastAPI (localhost:8080)
 make ui               # Start Streamlit dashboard (localhost:8501)
 make test             # Run pytest test suite
 make lint             # Ruff + mypy checks
+make seed-local-forecasts # Seed local forecasts from real Rossmann CSVs
+make build-index      # Build FAISS index from business docs
+make sync-narratives  # Generate first 20 narratives from local forecasts
+make baseline-report  # Backtest local forecaster against simple baselines
 make etl-local        # Run Beam ETL with DirectRunner (free)
 make etl-gcp          # Run Beam ETL on Dataflow (GCP billing)
 make bqml-train       # Train ARIMA_PLUS model in BigQuery
 make bqml-forecast    # Generate 30-day forecasts
 make sync-forecasts   # Sync BQ forecasts → PostgreSQL
 ```
+
+---
+
+## Baseline Comparison
+
+The no-GCP local forecast path is validated with a holdout backtest over the last 30 actual days in `data/raw/train.csv`.
+
+| Model | MAE | RMSE | MAPE % | Bias % |
+|---|---:|---:|---:|---:|
+| `local_seasonal_trend` | 1,898.84 | 3,033.18 | 16.92 | 17.06 |
+| `seasonal_naive_7d` | 1,936.19 | 3,008.47 | 21.91 | 16.46 |
+| `moving_average_28d` | 2,175.10 | 3,100.44 | 23.03 | 2.70 |
+| `moving_average_7d` | 2,251.98 | 3,291.47 | 24.74 | 13.28 |
+
+Full report: [data/reports/baseline_comparison.md](data/reports/baseline_comparison.md).
 
 ---
 

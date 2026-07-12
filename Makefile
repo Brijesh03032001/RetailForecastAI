@@ -76,6 +76,10 @@ sync-forecasts:  ## Pull forecasts from BigQuery into PostgreSQL
 sync-narratives:  ## Generate AI narratives and save to PostgreSQL (first 20 stores)
 	$(VENV)/bin/python scripts/sync_narratives.py --limit 20
 
+.PHONY: seed-local-forecasts
+seed-local-forecasts:  ## Seed PostgreSQL forecasts from local Rossmann CSVs (no GCP)
+	env $$(cat .env | grep -v '^#' | xargs) $(VENV)/bin/python scripts/seed_forecasts_local.py
+
 .PHONY: ui
 ui:  ## Launch the Streamlit demo UI (http://localhost:8501)
 	ARROW_DEFAULT_MEMORY_POOL=system $(VENV)/bin/streamlit run streamlit_app.py
@@ -97,6 +101,10 @@ run:  ## Start the FastAPI dev server (auto-reload)
 .PHONY: build-index
 build-index:  ## (Re)build the FAISS embedding index from data/business_docs
 	$(PYTHON) -m scripts.build_index
+
+.PHONY: baseline-report
+baseline-report:  ## Backtest local forecaster against simple baselines
+	$(VENV)/bin/python scripts/baseline_compare.py
 
 .PHONY: seed
 seed:  ## Upload synthetic sales CSV to GCS (dev only)
