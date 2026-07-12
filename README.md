@@ -557,6 +557,8 @@ make build-index
 
 # 7. Optional: generate AI narratives for a small batch
 make sync-narratives
+# Resume safely later:
+# .venv/bin/python scripts/sync_narratives.py --limit 15 --skip-existing
 
 # 8. Start the API
 make run                   # uvicorn on localhost:8080

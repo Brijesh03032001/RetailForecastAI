@@ -17,6 +17,9 @@ Usage
 
 # Custom batch size & worker concurrency
 .venv/bin/python scripts/sync_narratives.py --limit 50 --workers 2
+
+# Process the next stores that do not already have narratives
+.venv/bin/python scripts/sync_narratives.py --limit 15 --skip-existing
 """
 
 from __future__ import annotations
@@ -64,9 +67,30 @@ def _row_to_dict(row: Forecast) -> dict:
     }
 
 
-async def _fetch_product_ids(session: AsyncSession, limit: int) -> list[str]:
+async def _fetch_product_ids(session: AsyncSession, limit: int, skip_existing: bool) -> list[str]:
     """Return up to *limit* distinct product_ids that have forecast rows."""
-    result = await session.execute(text(f"SELECT DISTINCT product_id FROM forecasts ORDER BY product_id LIMIT {limit}"))
+    if skip_existing:
+        result = await session.execute(
+            text("""
+                SELECT DISTINCT f.product_id
+                FROM forecasts f
+                LEFT JOIN narratives n ON n.product_id = f.product_id
+                WHERE n.product_id IS NULL
+                ORDER BY f.product_id
+                LIMIT :limit
+            """),
+            {"limit": limit},
+        )
+    else:
+        result = await session.execute(
+            text("""
+                SELECT DISTINCT product_id
+                FROM forecasts
+                ORDER BY product_id
+                LIMIT :limit
+            """),
+            {"limit": limit},
+        )
     return [row[0] for row in result.fetchall()]
 
 
@@ -118,6 +142,7 @@ async def sync(
     limit: int,
     workers: int,
     delay: float,
+    skip_existing: bool,
 ) -> None:
     cfg = get_settings()
     engine = create_async_engine(cfg.database_url, echo=False)
@@ -129,8 +154,9 @@ async def sync(
             product_ids = [product_id.upper()]
             logger.info("Single-store mode: %s", product_ids[0])
         else:
-            product_ids = await _fetch_product_ids(session, limit)
-            logger.info("Found %d product_ids to process (limit=%d)", len(product_ids), limit)
+            product_ids = await _fetch_product_ids(session, limit, skip_existing)
+            mode = "without existing narratives" if skip_existing else "with forecasts"
+            logger.info("Found %d product_ids %s to process (limit=%d)", len(product_ids), mode, limit)
 
     if not product_ids:
         logger.warning("No products with forecasts found — run sync_forecasts.py first.")
@@ -154,7 +180,8 @@ async def sync(
 
     # ── 3. Generate narratives (thread pool for Groq calls) ────
     chain = NarrativeChain()
-    results: list[tuple[str, str | Exception]] = []
+    saved = 0
+    failed = 0
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = {}
@@ -168,21 +195,17 @@ async def sync(
         for done, fut in enumerate(as_completed(futures), start=1):
             pid, result = fut.result()
             if isinstance(result, Exception):
+                failed += 1
                 logger.error("[%d/%d] FAILED %s: %s", done, total, pid, result)
             else:
                 logger.info("[%d/%d] OK %s (%d chars)", done, total, pid, len(result))
-            results.append((pid, result))
-
-    # ── 4. Persist to PostgreSQL ───────────────────────────────
-    saved = 0
-    async with async_session() as session:
-        for pid, narrative in results:
-            if isinstance(narrative, str):
-                await _save_narrative(session, pid, narrative)
+                async with async_session() as session:
+                    await _save_narrative(session, pid, result)
                 saved += 1
+                logger.info("[%d/%d] SAVED %s", done, total, pid)
 
     await engine.dispose()
-    logger.info("Saved %d/%d narratives to PostgreSQL.", saved, len(results))
+    logger.info("Saved %d/%d narratives to PostgreSQL (%d failed).", saved, len(futures), failed)
 
 
 def main() -> None:
@@ -211,8 +234,13 @@ def main() -> None:
         default=1.0,
         help="Seconds to wait between launching Groq requests (default: 1.0).",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Only process stores that do not already have a saved narrative.",
+    )
     args = parser.parse_args()
-    asyncio.run(sync(args.product, args.limit, args.workers, args.delay))
+    asyncio.run(sync(args.product, args.limit, args.workers, args.delay, args.skip_existing))
 
 
 if __name__ == "__main__":
