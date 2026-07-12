@@ -67,3 +67,9 @@ Non-GCP improvements added after the first local bring-up:
 6. **Updated docs** so README now clearly separates the no-GCP local demo path from the cloud production path.
 
 Current baseline result on 1,115 stores / 33,450 holdout rows: `local_seasonal_trend` is best by MAE among the included local baselines (MAE 1,898.84; MAPE 16.92%).
+
+## Continued local polish
+
+- Added a Streamlit **Model Benchmarks** tab that reads `data/reports/baseline_metrics.csv` and visualizes MAE/RMSE/MAPE/bias for the local baseline comparison.
+- Added `scripts/local_doctor.py` plus `make local-doctor` to check no-GCP demo readiness: raw Rossmann CSVs, baseline metrics, FAISS index, PostgreSQL forecast/narrative counts, and FastAPI health.
+- Added focused tests for the local doctor helper behavior in `tests/test_local_doctor.py`.

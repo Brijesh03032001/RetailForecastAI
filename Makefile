@@ -106,6 +106,10 @@ build-index:  ## (Re)build the FAISS embedding index from data/business_docs
 baseline-report:  ## Backtest local forecaster against simple baselines
 	$(VENV)/bin/python scripts/baseline_compare.py
 
+.PHONY: local-doctor
+local-doctor:  ## Check local no-GCP demo readiness
+	$(VENV)/bin/python scripts/local_doctor.py
+
 .PHONY: seed
 seed:  ## Upload synthetic sales CSV to GCS (dev only)
 	$(PYTHON) -m scripts.seed_data

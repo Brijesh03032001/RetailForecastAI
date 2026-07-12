@@ -563,6 +563,18 @@ make run                   # uvicorn on localhost:8080
 make ui                    # streamlit on localhost:8501
 ```
 
+### Local Readiness Check
+
+```bash
+make local-doctor          # raw data, baseline report, FAISS, DB, API
+```
+
+Use strict mode before a demo:
+
+```bash
+.venv/bin/python scripts/local_doctor.py --strict
+```
+
 ### Local Baseline Report
 
 ```bash
@@ -589,6 +601,7 @@ make seed-local-forecasts # Seed local forecasts from real Rossmann CSVs
 make build-index      # Build FAISS index from business docs
 make sync-narratives  # Generate first 20 narratives from local forecasts
 make baseline-report  # Backtest local forecaster against simple baselines
+make local-doctor     # Check local no-GCP demo readiness
 make etl-local        # Run Beam ETL with DirectRunner (free)
 make etl-gcp          # Run Beam ETL on Dataflow (GCP billing)
 make bqml-train       # Train ARIMA_PLUS model in BigQuery
