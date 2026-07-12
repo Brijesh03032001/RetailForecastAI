@@ -271,6 +271,16 @@ def load_weekly_fleet() -> pd.DataFrame:
 
 
 @st.cache_data(ttl=300, show_spinner=False)
+def load_narrative_coverage() -> pd.DataFrame:
+    return _pg_query("""
+        SELECT
+            COUNT(*)                    AS narrative_rows,
+            COUNT(DISTINCT product_id)  AS stores_with_narratives
+        FROM narratives
+    """)
+
+
+@st.cache_data(ttl=300, show_spinner=False)
 def load_baseline_metrics() -> pd.DataFrame:
     if not BASELINE_METRICS_PATH.exists():
         return pd.DataFrame()
@@ -393,6 +403,17 @@ st.iframe(
 )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Pre-load fleet data (all cached at module level for dashboard speed)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+fleet_df = load_fleet_summary()
+dow_df = load_dow_pattern()
+trend_df = load_fleet_daily_trend()
+weekly_fleet = load_weekly_fleet()
+narrative_coverage_df = load_narrative_coverage()
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # Sidebar
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -407,6 +428,20 @@ with st.sidebar:
     c1.markdown(_badge(health.get("status", "error")), unsafe_allow_html=True)
     c2.markdown("**DB**")
     c2.markdown(_badge(health.get("db", "error")), unsafe_allow_html=True)
+
+    if not narrative_coverage_df.empty:
+        stores_with_narratives = int(narrative_coverage_df["stores_with_narratives"].iloc[0] or 0)
+        coverage_pct = stores_with_narratives / 1115 * 100
+        st.markdown(
+            f"""
+<div style="margin-top:.7rem; padding:.65rem .75rem; border:1px solid #24435f; border-radius:8px; background:#102338">
+  <div style="font-size:.78rem; color:#9FB3C8">Narrative Coverage</div>
+  <div style="font-size:1.2rem; color:#E2EBF3; font-weight:700">{stores_with_narratives:,} / 1,115</div>
+  <div style="font-size:.76rem; color:#9FB3C8">{coverage_pct:.1f}% of stores</div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
     st.markdown("##### 🏪 Store Selector")
@@ -435,15 +470,6 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Pre-load fleet data (all cached at module level for dashboard speed)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-fleet_df = load_fleet_summary()
-dow_df = load_dow_pattern()
-trend_df = load_fleet_daily_trend()
-weekly_fleet = load_weekly_fleet()
 
 # Per-store API data for selected stores
 all_selected = [primary_store] + compare_stores
@@ -1365,7 +1391,13 @@ with tab_narrative:
     hdr_col, ref_col = st.columns([4, 1])
     with hdr_col:
         st.markdown("### 🤖 AI Executive Summary")
-        st.caption(f"**{primary_store}** · LLaMA 3.3·70B (Groq) + FAISS RAG on Rossmann business documents")
+        if not narrative_coverage_df.empty:
+            covered = int(narrative_coverage_df["stores_with_narratives"].iloc[0] or 0)
+            st.caption(
+                f"**{primary_store}** · local Ollama/OpenAI-compatible RAG · {covered:,} / 1,115 stores covered"
+            )
+        else:
+            st.caption(f"**{primary_store}** · local Ollama/OpenAI-compatible RAG")
     with ref_col:
         if st.button("🔄 Refresh", use_container_width=True):
             fetch_narrative.clear()
@@ -1383,7 +1415,11 @@ with tab_narrative:
             except ValueError:
                 st.caption(f"Generated {gen_at}")
     else:
-        st.info(f"No narrative for **{primary_store}** yet. Click below or run `make sync-narratives`.")
+        st.info(
+            f"No narrative for **{primary_store}** yet. Click below for a one-off preview, "
+            "or run `.venv/bin/python scripts/sync_narratives.py --limit 15 --skip-existing` "
+            "to persist the next batch safely."
+        )
 
     st.markdown("---")
     st.markdown("#### ⚡ Generate live")

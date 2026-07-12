@@ -73,7 +73,7 @@ The Streamlit dashboard provides six tabs of business intelligence:
 | 📊 **Store Forecast** | Per-store 5 KPIs, forecast line + 80% CI band + peak marker, weekly bar, DOW pattern, benchmark bullet chart (vs P25/P50/P75/P90), week-over-week change, CSV export |
 | 🔀 **Compare** | Multi-store overlay chart, comparison summary table with percentile ranks across all 1,115 stores |
 | 🧪 **Model Benchmarks** | Local 30-day holdout backtest comparing the no-GCP seasonal-trend forecaster against seasonal-naive and moving-average baselines |
-| 🤖 **AI Narrative** | Latest stored narrative for a selected store, with an optional on-demand generation path |
+| 🤖 **AI Narrative** | Narrative coverage indicator, latest stored narrative for a selected store, and optional on-demand generation path |
 | ℹ️ **About** | System architecture, tech stack, dataset info, quick-start guide |
 
 ```bash
