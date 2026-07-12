@@ -50,3 +50,8 @@ data/faiss_index/
 # ── Local agent metadata ─────────────────────────────────────────
 .agents/
 CLAUDE.md
+
+# ── Local-only commit helper scripts ─────────────────────────────
+generate_commits.py
+generate_range.py
+random_commit_generator.py
