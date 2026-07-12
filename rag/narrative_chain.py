@@ -36,6 +36,7 @@ def _make_llm():
             model=cfg.openai_chat_model,
             temperature=0.3,
             openai_api_key=cfg.openai_api_key,
+            openai_api_base=cfg.openai_api_base,
             request_timeout=cfg.openai_request_timeout,
             max_retries=3,
         )

@@ -78,7 +78,7 @@ sync-narratives:  ## Generate AI narratives and save to PostgreSQL (first 20 sto
 
 .PHONY: ui
 ui:  ## Launch the Streamlit demo UI (http://localhost:8501)
-	$(VENV)/bin/streamlit run streamlit_app.py
+	ARROW_DEFAULT_MEMORY_POOL=system $(VENV)/bin/streamlit run streamlit_app.py
 
 .PHONY: migration
 migration:  ## Generate a new migration (make migration msg="your description")

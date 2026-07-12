@@ -36,6 +36,7 @@ rag = [
   "langchain-text-splitters>=0.2",
   "langchain-huggingface>=0.0.3",
   "langchain-groq>=0.1.9",
+  "langchain-openai>=0.1",
   "faiss-cpu>=1.7",
   "sentence-transformers>=2.7",
   "pypdf>=4.2",
@@ -54,6 +55,8 @@ ui = [
   "streamlit>=1.35",
   "plotly>=5.22",
   "requests>=2.31",
+  "psycopg2-binary>=2.9",
+  "pandas>=2.2,<3.0",  # pandas 3.x's pyarrow-backed dtype default segfaults in pd.read_sql on this arm64 build
 ]
 dev = [
   "pytest>=8.2",

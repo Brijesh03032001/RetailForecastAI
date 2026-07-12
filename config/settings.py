@@ -38,7 +38,9 @@ class Settings(BaseSettings):
     )
 
     # ── OpenAI (optional — only needed when provider=openai) ───
-    openai_api_key: str | None = Field(None, description="OpenAI secret key")
+    # Also used for any OpenAI-compatible endpoint (e.g. Runware) via openai_api_base.
+    openai_api_key: str | None = Field(None, description="OpenAI (or OpenAI-compatible) secret key")
+    openai_api_base: str | None = Field(None, description="Override base URL for OpenAI-compatible providers")
     openai_embed_model: str = Field("text-embedding-3-small")
     openai_chat_model: str = Field("gpt-4o")
     openai_request_timeout: int = Field(60, ge=10)
