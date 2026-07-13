@@ -77,12 +77,14 @@ export function Sidebar({
   onSelect,
   coveragePct,
   collapsed,
+  collapsible,
   onToggleCollapsed,
 }: {
   active: Section;
   onSelect: (section: Section) => void;
   coveragePct: number | null;
   collapsed: boolean;
+  collapsible: boolean;
   onToggleCollapsed: () => void;
 }) {
   const info = SECTION_INFO[active];
@@ -95,13 +97,15 @@ export function Sidebar({
             ← RetailForecastAI
           </Link>
         )}
-        <button
-          onClick={onToggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-white/5 hover:text-white"
-        >
-          {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
-        </button>
+        {collapsible && (
+          <button
+            onClick={onToggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="ml-auto flex size-8 shrink-0 items-center justify-center rounded-lg text-neutral-500 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            {collapsed ? <ChevronsRight className="size-4" /> : <ChevronsLeft className="size-4" />}
+          </button>
+        )}
       </div>
       <Link href="/" className="text-base text-neutral-400 hover:text-white lg:hidden">
         ← RetailForecastAI

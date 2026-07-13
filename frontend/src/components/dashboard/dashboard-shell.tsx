@@ -32,7 +32,10 @@ export function DashboardShell({
   baselineMetrics: BaselineMetricsResponse | null;
 }) {
   const [active, setActive] = useState<Section>(SECTIONS[0]);
-  const [collapsed, setCollapsed] = useState(false);
+  // Sidebar collapse only applies to Overview (dense layout benefits from the space).
+  // Every other tab always shows the full sidebar and can't be collapsed.
+  const [overviewCollapsed, setOverviewCollapsed] = useState(true);
+  const isOverview = active === "Overview";
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:gap-6 xl:px-10">
@@ -40,8 +43,9 @@ export function DashboardShell({
         active={active}
         onSelect={setActive}
         coveragePct={narrativeCoverage?.coverage_pct ?? null}
-        collapsed={collapsed}
-        onToggleCollapsed={() => setCollapsed((v) => !v)}
+        collapsed={isOverview && overviewCollapsed}
+        collapsible={isOverview}
+        onToggleCollapsed={() => setOverviewCollapsed((v) => !v)}
       />
 
       <main className="min-w-0 flex-1">
