@@ -16,7 +16,7 @@ End-to-end retail demand forecasting system on the Rossmann Store Sales dataset 
 | Database | `db/models.py`, `migrations/` | Postgres via SQLAlchemy async + asyncpg, Alembic migrations. Tables: `forecasts`, `narratives`, `pipeline_runs` |
 | API | `api/` | FastAPI — `/health`, `/v1/forecasts/{id}`, `/v1/narrative/{id}`, `POST /v1/pipeline/run` |
 | RAG/LLM narratives | `rag/` | LangChain, FAISS vector store, local MiniLM embeddings, LLM-agnostic chat call |
-| Dashboard | `streamlit_app.py` | 5-tab Streamlit + Plotly BI dashboard |
+| Dashboard | `streamlit_app.py` | 6-tab Streamlit + Plotly BI dashboard |
 | Orchestration | `pipeline/orchestrator.py` | Coordinates ETL → BQ → DB → LLM full run |
 | Scripts | `scripts/` | `seed_data.py`, `sync_forecasts.py`, `sync_narratives.py`, `run_bqml.py`, `build_index.py` |
 | Tests | `tests/` | pytest, api + etl + rag tests |
@@ -46,8 +46,10 @@ Real dataset in `data/raw/`: `train.csv` (~1M rows), `test.csv`, `store.csv` (1,
 - `env $(cat .env|grep -v '^#'|xargs) .venv/bin/python scripts/seed_forecasts_local.py` — seed all 1,115 stores' forecasts locally (no GCP)
 - `env $(cat .env|grep -v '^#'|xargs) .venv/bin/python -m scripts.build_index` — build FAISS index
 - `env $(cat .env|grep -v '^#'|xargs) .venv/bin/python scripts/sync_narratives.py --limit N` — generate LLM narratives via local Ollama
+- `env $(cat .env|grep -v '^#'|xargs) .venv/bin/python scripts/sync_narratives.py --limit N --skip-existing` — safely generate the next unfinished narrative batch
 - `make run` — FastAPI on :8080
 - `make ui` — Streamlit dashboard on :8501 (now includes the Arrow allocator fix automatically)
+- `make local-doctor` — check raw data, baseline report, FAISS, DB forecast/narrative counts, and API health
 
 `.env` is configured for: local Postgres, `LLM_PROVIDER=openai` pointed at local Ollama via `OPENAI_API_BASE=http://localhost:11434/v1`, `EMBEDDING_PROVIDER=local` (MiniLM, no API calls).
 
@@ -76,3 +78,20 @@ Current baseline result on 1,115 stores / 33,450 holdout rows: `local_seasonal_t
 - Added `requirements.lock` plus `make lock` to pin the current local runtime dependency set and reduce fresh-clone drift.
 - Updated `scripts/sync_narratives.py` to support `--skip-existing` and save each completed narrative immediately, so interrupted local Ollama batches keep completed work.
 - Added FastAPI dashboard/frontend endpoints under `/v1/dashboard/*` for store lists, fleet summaries, daily/weekly trends, day-of-week patterns, narrative coverage, and baseline metrics. This prepares the backend for a future Next.js frontend without direct DB access.
+
+## Current local state after backend-first work
+
+- Forecasts: 33,450 rows for 1,115 stores in local PostgreSQL.
+- Narratives: 20 stores currently saved (`STORE_0001` through `STORE_0020`).
+- Baseline evidence: local seasonal-trend model beats the included seasonal-naive/moving-average baselines by MAE on the final 30-day holdout.
+- Dashboard: includes Network Overview, Store Forecast, Compare, Model Benchmarks, AI Narrative, and About tabs. Sidebar now shows narrative coverage.
+- Backend: FastAPI now exposes frontend-ready dashboard endpoints:
+  - `/v1/dashboard/stores`
+  - `/v1/dashboard/fleet-summary`
+  - `/v1/dashboard/daily-trend`
+  - `/v1/dashboard/dow-pattern`
+  - `/v1/dashboard/weekly-fleet`
+  - `/v1/dashboard/narrative-coverage`
+  - `/v1/dashboard/baseline-metrics`
+- Testing: focused API/dashboard/narrative/local-doctor tests pass locally; full repo lint/test still has older unrelated Spark notebook / optional Beam dependency issues.
+- Git: latest local commits are split into multiple meaningful commits, including dashboard coverage UI, dashboard API routes, API tests, and API docs.
