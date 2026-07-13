@@ -1,9 +1,14 @@
+import { BookOpenCheck, Calendar, Store, Trophy, TrendingUp } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { LiquidGlassCard } from "@/components/liquid-glass-card";
 import { LineChart } from "@/components/charts/line-chart";
 import { BarChart } from "@/components/charts/bar-chart";
+import { DonutChart } from "@/components/charts/donut-chart";
+import { ScatterChart } from "@/components/charts/scatter-chart";
 import { Insight } from "@/components/dashboard/insight";
 import { chartColor } from "@/lib/chart-theme";
-import { dailyTrendInsight, dowInsight, topStoreInsight } from "@/lib/insights";
+import { dailyTrendInsight, dowInsight, peakDay, tierInsight, topStoreInsight, uncertaintyInsight } from "@/lib/insights";
+import { computeStoreTiers, tierCounts } from "@/lib/tiers";
 import type {
   BaselineMetricsResponse,
   DailyTrendResponse,
@@ -14,6 +19,39 @@ import type {
 
 const numberFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 const pctFmt = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+
+const TIER_COLORS: Record<string, string> = {
+  High: chartColor.categorical[5], // red — hottest/most valuable
+  Mid: chartColor.categorical[2], // yellow
+  Low: chartColor.categorical[1], // aqua
+};
+
+function StatTile({
+  icon: Icon,
+  color,
+  label,
+  value,
+  sub,
+}: {
+  icon: LucideIcon;
+  color: string;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-3.5">
+      <div className="flex items-center gap-2.5">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md" style={{ backgroundColor: `${color}26` }}>
+          <Icon className="size-3.5" style={{ color }} aria-hidden />
+        </div>
+        <p className="truncate text-xs text-neutral-400">{label}</p>
+      </div>
+      <p className="mt-2 truncate text-xl font-semibold text-white">{value}</p>
+      {sub && <p className="truncate text-[11px] text-neutral-500">{sub}</p>}
+    </LiquidGlassCard>
+  );
+}
 
 export function OverviewSection({
   fleetSummary,
@@ -28,44 +66,67 @@ export function OverviewSection({
   narrativeCoverage: NarrativeCoverageResponse | null;
   baselineMetrics: BaselineMetricsResponse | null;
 }) {
-  const topStores = fleetSummary?.stores.slice(0, 8) ?? [];
+  const topStores = fleetSummary?.stores.slice(0, 6) ?? [];
+  const topStore = fleetSummary?.stores[0] ?? null;
+  const busiest = peakDay(dowPattern);
   const bestBaseline = baselineMetrics?.metrics.length
     ? [...baselineMetrics.metrics].sort((a, b) => a.mae - b.mae)[0]
     : null;
 
+  const tiered = computeStoreTiers(fleetSummary);
+  const counts = tierCounts(tiered);
+  const donutData = counts.map((c) => ({ label: c.tier, value: c.count, color: TIER_COLORS[c.tier] }));
+
+  const scatterData = tiered
+    .filter((s) => s.avg_ci_width != null)
+    .map((s) => ({ label: s.product_id, x: s.total_30d, y: s.avg_ci_width as number, category: s.tier }));
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-7 sm:py-7">
-          <p className="text-base text-neutral-300">Stores forecasted</p>
-          <p className="mt-2 text-4xl font-semibold text-white">{fleetSummary ? numberFmt.format(fleetSummary.count) : "—"}</p>
-        </LiquidGlassCard>
-
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-7 sm:py-7">
-          <p className="text-base text-neutral-300">Narrative coverage</p>
-          <p className="mt-2 text-4xl font-semibold text-white">
-            {narrativeCoverage ? `${pctFmt.format(narrativeCoverage.coverage_pct)}%` : "—"}
-          </p>
-          {narrativeCoverage && (
-            <p className="mt-1 text-sm text-neutral-400">
-              {narrativeCoverage.stores_with_narratives} / {narrativeCoverage.total_stores} stores
-            </p>
-          )}
-        </LiquidGlassCard>
-
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-7 sm:py-7">
-          <p className="text-base text-neutral-300">Best local baseline</p>
-          <p className="mt-2 truncate text-4xl font-semibold text-white">{bestBaseline?.model ?? "—"}</p>
-          {bestBaseline && <p className="mt-1 text-sm text-neutral-400">MAE {numberFmt.format(bestBaseline.mae)}</p>}
-        </LiquidGlassCard>
+    <div className="flex flex-col gap-3">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        <StatTile
+          icon={Store}
+          color={chartColor.categorical[0]}
+          label="Stores forecasted"
+          value={fleetSummary ? numberFmt.format(fleetSummary.count) : "—"}
+        />
+        <StatTile
+          icon={Trophy}
+          color={chartColor.categorical[5]}
+          label="Top store (30d)"
+          value={topStore?.product_id ?? "—"}
+          sub={topStore ? `${numberFmt.format(topStore.total_30d)} units` : undefined}
+        />
+        <StatTile
+          icon={Calendar}
+          color={chartColor.categorical[2]}
+          label="Busiest weekday"
+          value={busiest?.day_abbr ?? "—"}
+          sub={busiest ? `${numberFmt.format(busiest.avg_units)} avg units/store` : undefined}
+        />
+        <StatTile
+          icon={BookOpenCheck}
+          color={chartColor.categorical[4]}
+          label="Narrative coverage"
+          value={narrativeCoverage ? `${pctFmt.format(narrativeCoverage.coverage_pct)}%` : "—"}
+          sub={narrativeCoverage ? `${narrativeCoverage.stores_with_narratives} / ${narrativeCoverage.total_stores} stores` : undefined}
+        />
+        <StatTile
+          icon={TrendingUp}
+          color={chartColor.categorical[1]}
+          label="Best local baseline"
+          value={bestBaseline?.model ?? "—"}
+          sub={bestBaseline ? `MAE ${numberFmt.format(bestBaseline.mae)}` : undefined}
+        />
       </section>
 
-      <section>
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-8 sm:py-8">
-          <h2 className="text-base font-medium text-neutral-200">Fleet daily forecast trend</h2>
-          <div className="mt-4">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Fleet daily forecast trend</h2>
+          <div className="mt-2">
             {dailyTrend && dailyTrend.days.length > 0 ? (
               <LineChart
+                height={130}
                 series={[
                   {
                     id: "total_units",
@@ -79,28 +140,27 @@ export function OverviewSection({
               <p className="text-sm text-neutral-500">No data available.</p>
             )}
           </div>
-          {dailyTrendInsight(dailyTrend) && <Insight>{dailyTrendInsight(dailyTrend)}</Insight>}
+          {dailyTrendInsight(dailyTrend) && <Insight compact>{dailyTrendInsight(dailyTrend)}</Insight>}
         </LiquidGlassCard>
-      </section>
 
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-8 sm:py-8">
-          <h2 className="text-base font-medium text-neutral-200">Top stores by 30-day forecast</h2>
-          <div className="mt-4">
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Top stores by 30-day forecast</h2>
+          <div className="mt-2">
             {topStores.length > 0 ? (
-              <BarChart data={topStores.map((s) => ({ label: s.product_id, value: s.total_30d }))} />
+              <BarChart height={130} data={topStores.map((s) => ({ label: s.product_id, value: s.total_30d }))} />
             ) : (
               <p className="text-sm text-neutral-500">No data available.</p>
             )}
           </div>
-          {topStoreInsight(fleetSummary) && <Insight>{topStoreInsight(fleetSummary)}</Insight>}
+          {topStoreInsight(fleetSummary) && <Insight compact>{topStoreInsight(fleetSummary)}</Insight>}
         </LiquidGlassCard>
 
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-6 py-6 sm:px-8 sm:py-8">
-          <h2 className="text-base font-medium text-neutral-200">Day-of-week demand pattern</h2>
-          <div className="mt-4">
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Day-of-week demand pattern</h2>
+          <div className="mt-2">
             {dowPattern && dowPattern.days.length > 0 ? (
               <BarChart
+                height={130}
                 data={dowPattern.days.map((d) => ({ label: d.day_abbr, value: d.avg_units }))}
                 color={chartColor.categorical[1]}
               />
@@ -108,7 +168,41 @@ export function OverviewSection({
               <p className="text-sm text-neutral-500">No data available.</p>
             )}
           </div>
-          {dowInsight(dowPattern) && <Insight>{dowInsight(dowPattern)}</Insight>}
+          {dowInsight(dowPattern) && <Insight compact>{dowInsight(dowPattern)}</Insight>}
+        </LiquidGlassCard>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Store tier distribution</h2>
+          <div className="mt-2">
+            {donutData.length > 0 ? (
+              <DonutChart data={donutData} compact />
+            ) : (
+              <p className="text-sm text-neutral-500">No data available.</p>
+            )}
+          </div>
+          {donutData.length > 0 && (
+            <Insight compact>{tierInsight(counts[0].count, counts[1].count, counts[2].count, tiered.length)}</Insight>
+          )}
+        </LiquidGlassCard>
+
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Volume vs. forecast uncertainty</h2>
+          <div className="mt-2">
+            {scatterData.length > 0 ? (
+              <ScatterChart
+                height={140}
+                data={scatterData}
+                categoryColors={TIER_COLORS}
+                xLabel="30-day volume (units)"
+                yLabel="Avg CI width (units)"
+              />
+            ) : (
+              <p className="text-sm text-neutral-500">No data available.</p>
+            )}
+          </div>
+          {uncertaintyInsight(fleetSummary) && <Insight compact>{uncertaintyInsight(fleetSummary)}</Insight>}
         </LiquidGlassCard>
       </section>
     </div>
