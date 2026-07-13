@@ -7,7 +7,6 @@ import { ChartTooltip, type TooltipState } from "./chart-tooltip";
 
 export type BarDatum = { label: string; value: number };
 
-const H = 260;
 const MARGIN = { top: 16, right: 16, bottom: 32, left: 56 };
 const BAR_MAX_THICKNESS = 24;
 const GAP = 2;
@@ -16,11 +15,14 @@ export function BarChart({
   data,
   color,
   valueFormat,
+  height = 260,
 }: {
   data: BarDatum[];
   color?: string;
   valueFormat?: (n: number) => string;
+  height?: number;
 }) {
+  const H = height;
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState>(null);
   const [width, setWidth] = useState(720);

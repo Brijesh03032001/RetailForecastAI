@@ -20,10 +20,18 @@ export type LineSeries = {
 };
 
 const W = 720;
-const H = 280;
 const MARGIN = { top: 16, right: 16, bottom: 28, left: 48 };
 
-export function LineChart({ series, valueFormat }: { series: LineSeries[]; valueFormat?: (n: number) => string }) {
+export function LineChart({
+  series,
+  valueFormat,
+  height = 280,
+}: {
+  series: LineSeries[];
+  valueFormat?: (n: number) => string;
+  height?: number;
+}) {
+  const H = height;
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipState>(null);
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
