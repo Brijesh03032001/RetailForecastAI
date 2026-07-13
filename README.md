@@ -682,6 +682,20 @@ curl -X POST http://localhost:8080/v1/pipeline/run \
 # → 202 Accepted
 ```
 
+### Dashboard / Frontend API
+
+These read-only endpoints expose the data currently used by Streamlit, so a future Next.js frontend does not need direct database access:
+
+```text
+GET /v1/dashboard/stores
+GET /v1/dashboard/fleet-summary
+GET /v1/dashboard/daily-trend
+GET /v1/dashboard/dow-pattern
+GET /v1/dashboard/weekly-fleet
+GET /v1/dashboard/narrative-coverage
+GET /v1/dashboard/baseline-metrics
+```
+
 Interactive docs available at `http://localhost:8080/docs` (development mode).
 
 ---

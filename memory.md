@@ -75,3 +75,4 @@ Current baseline result on 1,115 stores / 33,450 holdout rows: `local_seasonal_t
 - Added focused tests for the local doctor helper behavior in `tests/test_local_doctor.py`.
 - Added `requirements.lock` plus `make lock` to pin the current local runtime dependency set and reduce fresh-clone drift.
 - Updated `scripts/sync_narratives.py` to support `--skip-existing` and save each completed narrative immediately, so interrupted local Ollama batches keep completed work.
+- Added FastAPI dashboard/frontend endpoints under `/v1/dashboard/*` for store lists, fleet summaries, daily/weekly trends, day-of-week patterns, narrative coverage, and baseline metrics. This prepares the backend for a future Next.js frontend without direct DB access.
