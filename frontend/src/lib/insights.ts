@@ -33,6 +33,23 @@ export function dowInsight(data: DayOfWeekPatternResponse | null): string | null
   return `${peak.day_abbr} is the peak demand day, ${lift.toFixed(0)}% above the weekly average.`;
 }
 
+export function peakDay(data: DayOfWeekPatternResponse | null): { day_abbr: string; avg_units: number } | null {
+  if (!data || data.days.length === 0) return null;
+  return [...data.days].sort((a, b) => b.avg_units - a.avg_units)[0];
+}
+
+export function tierInsight(high: number, mid: number, low: number, total: number): string {
+  return `${high} store${high === 1 ? "" : "s"} rank High volume (top 5%), ${mid} Mid, and ${low} Low — out of ${total} forecasted stores.`;
+}
+
+export function uncertaintyInsight(data: FleetSummaryResponse | null): string | null {
+  if (!data || data.stores.length === 0) return null;
+  const withCi = data.stores.filter((s) => s.avg_ci_width != null);
+  if (withCi.length === 0) return null;
+  const widest = [...withCi].sort((a, b) => (b.avg_ci_width ?? 0) - (a.avg_ci_width ?? 0))[0];
+  return `${widest.product_id} carries the widest forecast uncertainty (±${num.format((widest.avg_ci_width ?? 0) / 2)} units) relative to its volume.`;
+}
+
 export function baselineInsight(data: BaselineMetricsResponse | null): string | null {
   if (!data || data.metrics.length < 2) return null;
   const sorted = [...data.metrics].sort((a, b) => a.mae - b.mae);
