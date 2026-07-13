@@ -120,6 +120,40 @@ export function OverviewSection({
         />
       </section>
 
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Store tier distribution</h2>
+          <div className="mt-2">
+            {donutData.length > 0 ? (
+              <DonutChart data={donutData} compact />
+            ) : (
+              <p className="text-sm text-neutral-500">No data available.</p>
+            )}
+          </div>
+          {donutData.length > 0 && (
+            <Insight compact>{tierInsight(counts[0].count, counts[1].count, counts[2].count, tiered.length)}</Insight>
+          )}
+        </LiquidGlassCard>
+
+        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
+          <h2 className="text-xs font-medium text-neutral-300">Volume vs. forecast uncertainty</h2>
+          <div className="mt-2">
+            {scatterData.length > 0 ? (
+              <ScatterChart
+                height={140}
+                data={scatterData}
+                categoryColors={TIER_COLORS}
+                xLabel="30-day volume (units)"
+                yLabel="Avg CI width (units)"
+              />
+            ) : (
+              <p className="text-sm text-neutral-500">No data available.</p>
+            )}
+          </div>
+          {uncertaintyInsight(fleetSummary) && <Insight compact>{uncertaintyInsight(fleetSummary)}</Insight>}
+        </LiquidGlassCard>
+      </section>
+
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
           <h2 className="text-xs font-medium text-neutral-300">Fleet daily forecast trend</h2>
@@ -169,40 +203,6 @@ export function OverviewSection({
             )}
           </div>
           {dowInsight(dowPattern) && <Insight compact>{dowInsight(dowPattern)}</Insight>}
-        </LiquidGlassCard>
-      </section>
-
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
-          <h2 className="text-xs font-medium text-neutral-300">Store tier distribution</h2>
-          <div className="mt-2">
-            {donutData.length > 0 ? (
-              <DonutChart data={donutData} compact />
-            ) : (
-              <p className="text-sm text-neutral-500">No data available.</p>
-            )}
-          </div>
-          {donutData.length > 0 && (
-            <Insight compact>{tierInsight(counts[0].count, counts[1].count, counts[2].count, tiered.length)}</Insight>
-          )}
-        </LiquidGlassCard>
-
-        <LiquidGlassCard className="liquid-glass-interactive min-w-0 px-4 py-4">
-          <h2 className="text-xs font-medium text-neutral-300">Volume vs. forecast uncertainty</h2>
-          <div className="mt-2">
-            {scatterData.length > 0 ? (
-              <ScatterChart
-                height={140}
-                data={scatterData}
-                categoryColors={TIER_COLORS}
-                xLabel="30-day volume (units)"
-                yLabel="Avg CI width (units)"
-              />
-            ) : (
-              <p className="text-sm text-neutral-500">No data available.</p>
-            )}
-          </div>
-          {uncertaintyInsight(fleetSummary) && <Insight compact>{uncertaintyInsight(fleetSummary)}</Insight>}
         </LiquidGlassCard>
       </section>
     </div>
