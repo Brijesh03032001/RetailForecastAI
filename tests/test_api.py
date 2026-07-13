@@ -77,6 +77,88 @@ async def test_get_forecasts_not_found(client: AsyncClient):
     assert resp.status_code == 404
 
 
+# ── Dashboard analytics ────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_dashboard_stores(client: AsyncClient, db_session):
+    await _seed_forecast(db_session, "STORE_0001")
+    await _seed_forecast(db_session, "STORE_0002")
+
+    resp = await client.get("/v1/dashboard/stores")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 2
+    assert data["stores"] == ["STORE_0001", "STORE_0002"]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_fleet_summary(client: AsyncClient, db_session):
+    await _seed_forecast(db_session, "STORE_0001")
+
+    resp = await client.get("/v1/dashboard/fleet-summary")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 1
+    row = data["stores"][0]
+    assert row["product_id"] == "STORE_0001"
+    assert row["total_30d"] == 303.0
+    assert row["peak_day"] == 102.0
+
+
+@pytest.mark.asyncio
+async def test_dashboard_daily_trend_and_weekly(client: AsyncClient, db_session):
+    await _seed_forecast(db_session, "STORE_0001")
+    await _seed_forecast(db_session, "STORE_0002")
+
+    daily = await client.get("/v1/dashboard/daily-trend")
+    weekly = await client.get("/v1/dashboard/weekly-fleet")
+
+    assert daily.status_code == 200
+    assert weekly.status_code == 200
+    assert daily.json()["count"] == 3
+    assert daily.json()["days"][0]["stores_active"] == 2
+    assert weekly.json()["count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_dashboard_dow_pattern(client: AsyncClient, db_session):
+    await _seed_forecast(db_session, "STORE_0001")
+
+    resp = await client.get("/v1/dashboard/dow-pattern")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 3
+    assert data["days"][0]["day_abbr"] == "Thu"
+
+
+@pytest.mark.asyncio
+async def test_dashboard_narrative_coverage(client: AsyncClient, db_session):
+    await _seed_narrative(db_session, "STORE_0001")
+    await _seed_narrative(db_session, "STORE_0002")
+
+    resp = await client.get("/v1/dashboard/narrative-coverage")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["narrative_rows"] == 2
+    assert data["stores_with_narratives"] == 2
+    assert data["total_stores"] == 1115
+
+
+@pytest.mark.asyncio
+async def test_dashboard_baseline_metrics(client: AsyncClient):
+    resp = await client.get("/v1/dashboard/baseline-metrics")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] >= 1
+    assert {"model", "mae", "rmse", "mape_pct", "bias_pct"} <= set(data["metrics"][0])
+
+
 # ── Narratives ─────────────────────────────────────────────────
 
 

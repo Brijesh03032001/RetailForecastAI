@@ -26,8 +26,13 @@ async def engine():
 async def db_session(engine) -> AsyncSession:
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
     async with factory() as session:
+        for table in reversed(Base.metadata.sorted_tables):
+            await session.execute(table.delete())
+        await session.commit()
         yield session
-        await session.rollback()
+        for table in reversed(Base.metadata.sorted_tables):
+            await session.execute(table.delete())
+        await session.commit()
 
 
 # ── Test FastAPI client ────────────────────────────────────────
