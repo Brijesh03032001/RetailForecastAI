@@ -32,15 +32,22 @@ export function DashboardShell({
   baselineMetrics: BaselineMetricsResponse | null;
 }) {
   const [active, setActive] = useState<Section>(SECTIONS[0]);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-8 px-6 py-8 sm:px-10 lg:flex-row lg:gap-10 xl:px-16">
-      <Sidebar active={active} onSelect={setActive} coveragePct={narrativeCoverage?.coverage_pct ?? null} />
+    <div className="mx-auto flex w-full max-w-[1800px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:gap-6 xl:px-10">
+      <Sidebar
+        active={active}
+        onSelect={setActive}
+        coveragePct={narrativeCoverage?.coverage_pct ?? null}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((v) => !v)}
+      />
 
       <main className="min-w-0 flex-1">
-        <div className="mb-6">
-          <p className="text-sm font-medium tracking-wide text-neutral-500 uppercase">Dashboard</p>
-          <h1 className="mt-1 text-3xl font-semibold text-white">{active}</h1>
+        <div className="mb-3">
+          <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">Dashboard</p>
+          <h1 className="mt-0.5 text-2xl font-semibold text-white">{active}</h1>
         </div>
 
         {active === "Overview" && (
