@@ -4,11 +4,12 @@
 
 > End-to-end retail demand forecasting — real ML on a real dataset, benchmarked against honest baselines, a RAG layer that explains the forecasts in plain language, and a full-stack product surface on top of it.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/Brijesh03032001/RetailForecastAI/ci.yml?branch=main&label=CI)](https://github.com/Brijesh03032001/RetailForecastAI/actions)
-[![Python](https://img.shields.io/badge/python-3.12+-blue)](pyproject.toml)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black)](frontend/package.json)
-[![BigQuery ML](https://img.shields.io/badge/BigQuery_ML-ARIMA__PLUS-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/bigquery)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey)](#)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![BigQuery ML](https://img.shields.io/badge/BigQuery_ML-1A73E8?style=for-the-badge&logo=googlecloud&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-31648C?style=for-the-badge&logo=postgresql&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
 
 ---
 
